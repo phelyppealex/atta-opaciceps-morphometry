@@ -1,3 +1,4 @@
+package image;
 import image.processing.Image;
 
 public class App {
