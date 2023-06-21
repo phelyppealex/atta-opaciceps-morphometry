@@ -8,43 +8,51 @@ public class App {
             pathOriginals = "src/image/originais/",
             pathResults = "src/image/resultantes/";
         // Total de colunas da pilha e cabeça na imagem
-        int totalColunasPilha, totalColunasCabeca;
+        int totalColunasPilha, totalColunasCabeca, limiar = 113;
         // A variável métrica diz respeito ao tamanho da pilha em mm
         float
             metrica = (float) 6.8,
             diametroPilha;
         
-        // Lendo banco de imagens
+        // Lendo do banco de imagens
         var imRGB = Image.imRead(pathOriginals + "1.jpg");
 
         // Convertendo a imagem para tons de cinza
         var imGray = Image.rgb2gray(imRGB);
+        
+        /*
+         * Criando cópia da imagem em tons de cinza
+         * para fazer a limiarização
+         */
+        var imLimiarizada = new int[imGray.length][imGray[0].length];
+        for(int i = 0; i < imGray.length; i++)
+            for(int j = 0; j < imGray[0].length; j++)
+                imLimiarizada[i][j] = imGray[i][j];
 
         /*
          * Fazendo a limiarização da imagem a partir
          * de uma intensidade constante encontrada
          */
-        for(int i = 0; i < imGray.length; i++)
-            for(int j = 0; j < imGray[0].length; j++)
-                if(imGray[i][j] < 110)
-                    imGray[i][j] = 1;
+        for(int i = 0; i < imLimiarizada.length; i++)
+            for(int j = 0; j < imLimiarizada[0].length; j++)
+                if(imLimiarizada[i][j] < limiar)
+                    imLimiarizada[i][j] = 1;
                 else
-                    imGray[i][j] = 0;
+                    imLimiarizada[i][j] = 0;
         
         /*
-         * Aqui a imagem se torna lógica com a função "logical" e,
-         * logo após, a imagem é erodida e dilatada para remover ruídos.
-         * A variável "imLogica recebe o resultado desse procedimento."
+         * Aqui acontecem 3 processos.
+         * - Primeiro a imagem "imLimiarizada" é transformada em lógica
+         * - É feito uma dilatação e 
          */
-        
         var imLogica = Image.bwClose(
-            Image.logical(imGray),
-            6
+            Image.logical(imLimiarizada),
+            8
         );
 
         imLogica = Image.bwOpen(
             imLogica,
-            15
+            18
         );
 
         /*
@@ -100,8 +108,14 @@ public class App {
             for(int j = 0; j < cabeca[0].length; j++)
                 cabeca[i][j] = imLogica[i][j+inicioCabeca];
         
-        Image.imWrite(pilha, pathResults+"pilha.png");
+        for(int i = 0; i < imGray.length; i++)
+            for(int j = 0; j < imGray[0].length; j++)
+                if(!imLogica[i][j])
+                    imGray[i][j] = 0;
+        
+        
+        Image.imWrite(imGray, pathResults+"cinza.png");
         Image.imWrite(imLogica, pathResults+"mascara.png");
-        Image.imWrite(Image.logical(imGray), pathResults+"logica.png");
+        Image.imWrite(Image.logical(imLimiarizada), pathResults+"logica.png");
     }
 }
