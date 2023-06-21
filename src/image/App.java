@@ -6,8 +6,14 @@ public class App {
         // Variáveis com os diretórios
         final String
             pathOriginals = "src/image/originais/",
-            pathResult = "src/image/resultantes/";
-
+            pathResults = "src/image/resultantes/";
+        // Total de colunas da pilha e cabeça na imagem
+        int totalColunasPilha, totalColunasCabeca;
+        // A variável métrica diz respeito ao tamanho da pilha em mm
+        float
+            metrica = (float) 6.8,
+            diametroPilha;
+        
         // Lendo banco de imagens
         var imRGB = Image.imRead(pathOriginals + "1.jpg");
 
@@ -30,9 +36,15 @@ public class App {
          * logo após, a imagem é erodida e dilatada para remover ruídos.
          * A variável "imLogica recebe o resultado desse procedimento."
          */
-        var imLogica = Image.bwOpen(
+        
+        var imLogica = Image.bwClose(
             Image.logical(imGray),
-            11
+            6
+        );
+
+        imLogica = Image.bwOpen(
+            imLogica,
+            15
         );
 
         /*
@@ -40,31 +52,56 @@ public class App {
          * da imagem para que vejamos quais colunas possuem
          * pixels de foreground.
          */
-        var somaPixels = new boolean[imLogica[0].length];
+        var fgPixels = new boolean[imLogica[0].length];
         for(int i = 0; i < imLogica.length; i++)
             for(int j = 0; j < imLogica[0].length; j++)
-                if(imLogica[i][j])
-                    somaPixels[j] = true;
+                if(imLogica[i][j] && !fgPixels[j])
+                    fgPixels[j] = true;
         
+        // Guardando índices de início e de fim das colunas correspondentes a pilha
         int inicioPilha = -1, fimPilha = -1;
-        for(int i = somaPixels.length-1; i >= 0; i--){
-            if(somaPixels[i]){
+        for(int i = fgPixels.length-1; i >= 0; i--){
+            if(fgPixels[i]){
                 if(inicioPilha == -1)
                     inicioPilha = i;
-                if(somaPixels[i-1] == false){
+                if(fgPixels[i-1] == false){
                     fimPilha = i;
                     break;
                 }
             }
         }
+        
+        totalColunasPilha = inicioPilha-fimPilha+1;
 
-        var pilha = new boolean[imLogica.length][inicioPilha-fimPilha+1];
-
+        // Criando imagem com apenas a pilha a partir dos indices obtidos anteriormente
+        var pilha = new boolean[imLogica.length][totalColunasPilha];
         for(int i = 0; i < pilha.length; i++)
             for(int j = 0; j < pilha[0].length; j++)
                 pilha[i][j] = imLogica[i][j+fimPilha];
         
-        Image.imWrite(pilha, pathResult+"pilha.jpg");
-        //Image.imWrite(imLogica, pathResult+"teste2.jpg");
+        // Guardando índices de início e de fim das colunas correspondentes a cabeça
+        int inicioCabeca = -1, fimCabeca = -1;
+        for(int i = 0; i < fgPixels.length; i++){
+            if(fgPixels[i]){
+                if(inicioCabeca == -1)
+                    inicioCabeca = i;
+                if(fgPixels[i+1] == false){
+                    fimCabeca = i;
+                    break;
+                }
+            }
+        }
+
+        totalColunasCabeca = fimCabeca-inicioCabeca+1;
+
+        // Criando imagem com apenas a cabeça a partir dos indices obtidos anteriormente
+        var cabeca = new boolean[imLogica.length][totalColunasCabeca];
+        for(int i = 0; i < cabeca.length; i++)
+            for(int j = 0; j < cabeca[0].length; j++)
+                cabeca[i][j] = imLogica[i][j+inicioCabeca];
+        
+        Image.imWrite(pilha, pathResults+"pilha.png");
+        Image.imWrite(imLogica, pathResults+"mascara.png");
+        Image.imWrite(Image.logical(imGray), pathResults+"logica.png");
     }
 }
